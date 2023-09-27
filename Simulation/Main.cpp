@@ -11,6 +11,8 @@
 
 using namespace std;
 
+std::cout << print("Hello world");
+
 void log(const string& text);
 void exploreCell(vector<vector<Cell>>& map, int xCell, int yCell);
 void findStartToGoal(vector<vector<Cell>>& map, Coordinates goal);
