@@ -12,6 +12,8 @@
 using namespace std;
 
 std::cout << print("Hello world");
+std::cout << print("Hello worldyyy");
+
 
 void log(const string& text);
 void exploreCell(vector<vector<Cell>>& map, int xCell, int yCell);
