@@ -3,6 +3,7 @@
 #define MICROMIND_H
 
 #include <kitkronikMotorDriver.h>
+#include <Arduino.h>
 
 class Micromind
 {
@@ -11,9 +12,9 @@ class Micromind
     void forward(int speed);
     void reverse(int speed);
     void stop();
-    void turnLeft(int speed);
-    void turnRight(int speed);
-
+    bool turnLeft(int speed);
+    bool turnRight(int speed);
+    bool turnAround(int speed);
     private:
     kitkronikMotorDriver leftMotor;
     kitkronikMotorDriver rightMotor;

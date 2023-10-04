@@ -16,19 +16,16 @@ int result;
 
 StateMachine::StateMachine(Micromind& mind) :
     frontSens(frontSensPin), leftSens(leftSensPin), leftAngledSens(leftAngledPin),
-    rightSens(rightSensPin), rightAngledSens(rightAngledPin), micromind(mind)
-{
-    currentState = STOP;
+    rightSens(rightSensPin), rightAngledSens(rightAngledPin), micromind(mind){
+    currentState = STOP;        // Initially sat to stop.
 }
 
-void StateMachine::updateState()
-{
+void StateMachine::updateState(){
     result = 0;
     startTime = millis();
     elapsedTime = 0;
 
-    for(int i = 0; i < numberOfReadings; i++)
-    {
+    for(int i = 0; i < numberOfReadings; i++){
         result += frontSens.read();
     }
     result = result / numberOfReadings;
@@ -42,28 +39,32 @@ void StateMachine::updateState()
     Serial.print(" milliseconds to generate");
     Serial.print(". Currentstate is now: ");
     Serial.println(currentState);
-    // Logic for when to stop       jo nærmere jo høyere verdi 600-700 er cirka avstand vi kommer til å stoppe
-    if (frontSens.read() > 500 && frontSens.read() <= 650)
-    {
+
+    // Logic for when to stop
+    if (result > 500 && result <= 650){
         currentState = STOP;   
     }
     // Logic for when to drive forwards
-    if(frontSens.read() <= 500){
+    if(result <= 500){
         currentState = FORWARD;
     }
     // Logic for when to reverse
-    if(frontSens.read() > 650){
+    if(result > 650 && result <= 950){
         currentState = REVERSE;
+    }
+
+    // Logic for when to turnAround
+    if(result > 950){
+        currentState = TURN_AROUND;
     }
     // Implement other logic as we get more sensors in place..
 }
 
-void StateMachine::executeStateLogic()
-{
+void StateMachine::executeStateLogic(){
     switch(currentState)
     {
         case FORWARD:
-            micromind.forward(255);
+            micromind.forward(512);
             break;
         case STOP:
             micromind.stop();
@@ -71,5 +72,18 @@ void StateMachine::executeStateLogic()
         case REVERSE:
             micromind.reverse(512);
             break;
+        case TURN_LEFT:
+            micromind.turnLeft(255);
+            break;
+        case TURN_RIGHT:
+            micromind.turnRight(255);
+            break;
+        case TURN_AROUND:
+            micromind.turnAround(255);
+            break;
     }
+}
+
+int StateMachine::getResult() {
+    return result;
 }

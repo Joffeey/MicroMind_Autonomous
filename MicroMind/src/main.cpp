@@ -1,6 +1,6 @@
 // Main.cpp
 #include <Arduino.h>
-#include <MicrobitV2-HHS.h>
+#include <NRF52_Radio_library.h>
 #include <Micromind.h>
 #include <StateMachine.h>
 
@@ -15,20 +15,37 @@
   // IR sensor pins
   const int IRSens1Pin= 1;
 
-  //Light for the states
+  // Result of sensor reading
+  int myResult;
 
+  // Radio comm.
+  NRF52_Radio radio;
+  FrameBuffer buffer;
 
   Micromind micromind(motor11, motor12, motor21, motor22);
   IRSensor IRSens1(IRSens1Pin);
   StateMachine micromindState(micromind);
 
+
 void setup() 
 {
   Serial.begin(9600);
+  radio.enable();
+  radio.setGroup(1);
+  radio.setTransmitPower(2);
+
 }
 
 void loop() 
 {
   micromindState.updateState();
+  myResult= micromindState.getResult();
   micromindState.executeStateLogic();
+  
+  buffer.length = sizeof(myResult);
+  buffer.version = 1;
+  buffer.group = 1;
+  buffer.protocol = MICROBIT_RADIO_PROTOCOL_DATAGRAM;
+  memcpy(buffer.payload, &myResult, buffer.length);
+  radio.send(&buffer);
 }

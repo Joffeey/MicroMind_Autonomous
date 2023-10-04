@@ -8,7 +8,7 @@
 
 
 
-enum State { FORWARD, STOP, REVERSE, TURN_LEFT, TURN_RIGHT};
+enum State { FORWARD, STOP, REVERSE, TURN_LEFT, TURN_RIGHT, TURN_AROUND};
 
 class StateMachine {
     private:
@@ -26,6 +26,7 @@ class StateMachine {
     State getState() const { return currentState; }
     void updateState();
     void executeStateLogic();
+    int getResult();
 };
 
 #endif
