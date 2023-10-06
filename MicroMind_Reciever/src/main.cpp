@@ -14,16 +14,16 @@ void setup() {
 
 void loop() {
   if(radio.dataReady() > 0){
-    FrameBuffer* recievedBuffer = radio.recv();
-    int recievedData;
+    FrameBuffer* receivedBuffer = radio.recv();
+    int receivedData;
 
-    if(recievedBuffer->length == sizeof(recievedData)){
-      memcpy(&recievedData, recievedBuffer->payload, recievedBuffer->length);
+    if(receivedBuffer->length == sizeof(recievedData)){
+      memcpy(&receivedData, receivedBuffer->payload, receivedBuffer->length);
 
-      Serial.print("Recieved data: ");
-      Serial.println(recievedData);
+      Serial.print("Received data: ");
+      Serial.println(receivedData);
     }
-    delete recievedBuffer;
+    delete receivedBuffer;
   }
 
 }
