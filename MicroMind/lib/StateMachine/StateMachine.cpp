@@ -37,8 +37,7 @@ void StateMachine::updateState(){
     Serial.print(" and it took: ");
     Serial.print(elapsedTime);
     Serial.print(" milliseconds to generate");
-    Serial.print(". Currentstate is now: ");
-    Serial.println(currentState);
+    Serial.println(". Currentstate is now: " + String(currentState));
 
     // Logic for when to stop
     if (result > 500 && result <= 650){

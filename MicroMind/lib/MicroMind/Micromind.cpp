@@ -76,6 +76,3 @@ bool Micromind::turnAround(int speed){
     }
     return false;
 }
-
-
-
