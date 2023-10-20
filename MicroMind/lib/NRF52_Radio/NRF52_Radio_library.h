@@ -26,24 +26,6 @@ This is a modifyed version of the landcaster implementation
 #pragma once
 #include "Arduino.h"
 
-// Microbit V2.00 contains a nRF52833-QDAA
-// Core variant:	64 MHz Arm® Cortex®-M4F
-// Flash ROM	512KB (128kB use for firmware, 128kB reserved for non-volatile storage, rest unused)
-// RAM	128KB (only 32 KB used)
-
-// Microbit V2.21 contains a nRF52820-QDAA
-// Core variant:	64 MHz Arm® Cortex®-M4
-// Flash ROM	256KB (128kB reserved for non-volatile storage)
-// RAM	32KB
-
-// No need to change the name from nRF52833 to nRF52820 (if you have a v2.21), it will automatically translate when necessary
-
-// Disabled the lines below; would not compile on a nRF52833 otherwise.
-// #include "nrf52.h"
-// #include "nrf52_bitfields.h"
-#include "nrf52833.h"
-#include "nrf52833_bitfields.h"
-
 #define MICROBIT_RADIO_STATUS_INITIALISED       0x0001
 
 // Default configuration values
@@ -233,4 +215,3 @@ private:
 	
 	
 };
-
