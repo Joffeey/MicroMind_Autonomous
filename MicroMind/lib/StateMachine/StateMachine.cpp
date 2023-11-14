@@ -13,11 +13,13 @@ const int threshold = 200;
 int numberOfReadings = 100;
 unsigned long startTime, elapsedTime;
 int result;
+int hallSensorValue; 
 
 StateMachine::StateMachine(Micromind& mind) :
     frontSens(frontSensPin), leftSens(leftSensPin), leftAngledSens(leftAngledPin),
     rightSens(rightSensPin), rightAngledSens(rightAngledPin), micromind(mind){
-    currentState = STOP;        // Initially sat to stop.
+    currentState = STOP;        // Initially set to stop.
+    pinMode(mind.readHallSensor(), INPUT); 
 }
 
 void StateMachine::updateState(){
@@ -81,6 +83,11 @@ void StateMachine::executeStateLogic(){
             micromind.turnAround(255);
             break;
     }
+
+    if(currentState == TURN_LEFT || currentState ==TURN_RIGHT ||currentState == TURN_AROUND){
+        hallSensorValue = micromind.readHallSensor(); 
+    }
+
 }
 
 int StateMachine::getResult() {
