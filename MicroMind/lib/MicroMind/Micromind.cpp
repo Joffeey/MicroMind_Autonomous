@@ -53,26 +53,23 @@ bool Micromind::turnLeft(int speed){
         turnStartTime = 0;
         return true;
     }
-
+/*
     if (millis() -lastHallSensorTime >= hallSensorInterval){
         lastHallSensorTime = millis(); 
-
 
         //read the values from sensors
         int frontSensorValue = readHallSensor();
         int rightSensorValue = digitalRead(4); //pin 4k, since this is the pin that is connected with the hallsensor. 
         int leftSensorValue = digitalRead(2);
         
-
-        //Apply condition for when it is supposed to take a left turn.
-        if (frontSensorValue > hallSensorThreshold && rightSensorValue == HIGH && leftSensorValue ==HIGH) {
-        //if (frontSensorValue > frontSensorThreshold && rightSensorValue > rightSensorThreshold && leftSensorValue < leftSensorThreshold) { //not finalized
+        if (frontSensorValue > hallSensorThreshold && rightSensorValue < 50) {
             leftMotor.stop();
-            rightMotor.stop();
+            rightMotor.forward(speed);
             turnStartTime = 0;
             return true;
         }
     }
+*/
     return false;
 }
 
@@ -89,19 +86,24 @@ bool Micromind::turnRight(int speed){
         turnStartTime = 0;
         return true;
     }
+/*
+    if (millis() -lastHallSensorTime >= hallSensorInterval){
+        lastHallSensorTime = millis(); 
 
-    if(millis() - lastHallSensorTime >= hallSensorInterval) {
-        lastHallSensorTime = millis();
-        int hallSensorValue = readHallSensor(); 
-
-        //Apply condition for when it is supposed to take a right turn.
-        if(hallSensorValue> hallSensorThreshold) {
-            leftMotor.stop();
-            rightMotor.stop(); 
+        //read the values from sensors
+        int frontSensorValue = readHallSensor();
+        int rightSensorValue = digitalRead(4); //pin 4, since this is the pin that is connected with the hallsensor. 
+        int leftSensorValue = digitalRead(2);
+        
+        
+        if (frontSensorValue > hallSensorThreshold && leftSensorValue < 50) {
+            leftMotor.forward(speed);
+            rightMotor.stop();
             turnStartTime = 0;
             return true;
         }
     }
+*/
     return false;
 }
 
@@ -121,19 +123,19 @@ bool Micromind::turnAround(int speed){
         turnStartTime = 0;
         return true;
     }
-
-    if(millis() - lastHallSensorTime >= hallSensorInterval){
+/*
+    if(millis() - lastHallSensorTime >= hallSensorInterval || ){
         lastHallSensorTime = millis(); 
         int hallSensorValue = readHallSensor(); 
 
-        //Apply condition for when it is supposed to turn around.
-        if(hallSensorValue > hallSensorThreshold) {
-            leftMotor.stop(); 
-            rightMotor.stop(); 
+        //Applying the condition for when it is supposed to turn around. Theoretical code at the moment. 
+        if(hallSensorValue > hallSensorThreshold && leftSensorInput < 50 || rightSensorInput < 50 ) {
+            leftMotor.reverse(speed); 
+            rightMotor.forward(speed); 
             turnStartTime = 0;
             return true; 
         }
-    }
+*/
 
     return false;
 }

@@ -26,7 +26,7 @@ private:
     unsigned long lastHallSensorTime; //check when we read it last. 
     unsigned long hallSensorInterval; // Check the interval between turns 
     int hallSensorThreshold; //must change this value based on when we wist to stop the rotation. 
-    int rotationsCount; 
+    int rotationsCount; //keep track of the hall sensor and how many rotations the wheel has done. 
     
 };
 
