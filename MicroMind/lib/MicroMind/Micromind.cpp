@@ -8,28 +8,30 @@ const int reverseScale = 1;
 const long turnScale = 5000;
 const long turnAroundScale = 10000;
 const unsigned long defaultHallSensorInterval = 100;
-
+unsigned long turnStartTime = 0;
 
 
 Micromind::Micromind(int leftPin1, int leftPin2, int rightPin1, int rightPin2, int hallSensorPin)
     : leftMotor(leftPin1, leftPin2), rightMotor(rightPin1, rightPin2), hallSensorPin(hallSensorPin) {
+    hallSensorInterval = defaultHallSensorInterval;
+    hallSensorThreshold = 100;
 }
 
-unsigned long turnStartTime = 0;
 
 int Micromind::readHallSensor() {
     return digitalRead(hallSensorPin);
 }
 
-
 void Micromind::forward(int speed){
-    leftMotor.forward(speed + forwardScale);
+    //leftMotor.forward(speed + forwardScale); //Scale for testing the motors, and make sure they drive the at the same speeds. 
+    leftMotor.forward(speed);
     rightMotor.forward(speed);
 }
 
 void Micromind::reverse(int speed){
     leftMotor.reverse(speed);
-    rightMotor.reverse(speed - reverseScale);
+    //rightMotor.reverse(speed - reverseScale);
+    rightMotor.reverse(speed);
 }
 
 void Micromind::stop(){
@@ -54,14 +56,21 @@ bool Micromind::turnLeft(int speed){
 
     if (millis() -lastHallSensorTime >= hallSensorInterval){
         lastHallSensorTime = millis(); 
-        int hallSensorValue = readHallSensor();
+
+
+        //read the values from sensors
+        int frontSensorValue = readHallSensor();
+        int rightSensorValue = digitalRead(4); //pin 4k, since this is the pin that is connected with the hallsensor. 
+        int leftSensorValue = digitalRead(2);
+        
 
         //Apply condition for when it is supposed to take a left turn.
-        if(hallSensorValue > hallSensorThreshold) {
+        if (frontSensorValue > hallSensorThreshold && rightSensorValue == HIGH && leftSensorValue ==HIGH) {
+        //if (frontSensorValue > frontSensorThreshold && rightSensorValue > rightSensorThreshold && leftSensorValue < leftSensorThreshold) { //not finalized
             leftMotor.stop();
-            rightMotor.stop(); 
+            rightMotor.stop();
             turnStartTime = 0;
-            return true; 
+            return true;
         }
     }
     return false;

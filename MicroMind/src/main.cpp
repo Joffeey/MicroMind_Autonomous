@@ -26,8 +26,7 @@ char driveCommand;
   const int motor21 = 0;
   const int motor22 = 16;
 
-  const int hallSensor1 = 1; //pin 1, can also use pin 2 according to internet. 
-
+  const int hallSensorPin = 5; //pin position
   // IR sensor pins
   const int IRSens1Pin= 1;
 
@@ -38,7 +37,7 @@ char driveCommand;
   bool handleAccelData = false;
 
 
-  Micromind micromind(motor11, motor12, motor21, motor22, hallSensor1);
+  Micromind micromind(motor11, motor12, motor21, motor22, hallSensorPin);
   IRSensor IRSens1(IRSens1Pin);
   StateMachine micromindState(micromind);
   enum Mode { MANUAL, AUTO};

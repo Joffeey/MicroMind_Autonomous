@@ -7,7 +7,7 @@
 
 class Micromind
 {
-    public:
+public:
 
     Micromind(int leftPin1, int leftPin2, int rightPin1, int rightPin2, int hallSensorPin);
     void forward(int speed);
@@ -18,14 +18,16 @@ class Micromind
     bool turnAround(int speed);
     int readHallSensor();
 
-    private:
+private:
     kitkronikMotorDriver leftMotor;
     kitkronikMotorDriver rightMotor;
+
     int hallSensorPin; 
     unsigned long lastHallSensorTime; //check when we read it last. 
     unsigned long hallSensorInterval; // Check the interval between turns 
     int hallSensorThreshold; //must change this value based on when we wist to stop the rotation. 
-
+    int rotationsCount; 
+    
 };
 
 #endif
