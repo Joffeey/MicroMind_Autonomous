@@ -58,9 +58,9 @@ bool Micromind::turnLeft(int speed){
         lastHallSensorTime = millis(); 
 
         //read the values from sensors
-        int frontSensorValue = readHallSensor();
-        int rightSensorValue = digitalRead(4); //pin 4k, since this is the pin that is connected with the hallsensor. 
-        int leftSensorValue = digitalRead(2);
+        int frontSensorValue = readHallSensor(4); //pin 4 since this is the pin that is connected with the hallsensor. 
+        int rightSensorValue = digitalRead();  
+        int leftSensorValue = digitalRead();
         
         if (frontSensorValue > hallSensorThreshold && rightSensorValue < 50) {
             leftMotor.stop();
@@ -91,9 +91,9 @@ bool Micromind::turnRight(int speed){
         lastHallSensorTime = millis(); 
 
         //read the values from sensors
-        int frontSensorValue = readHallSensor();
-        int rightSensorValue = digitalRead(4); //pin 4, since this is the pin that is connected with the hallsensor. 
-        int leftSensorValue = digitalRead(2);
+        int frontSensorValue = readHallSensor(4); //pin 4 since this is the pin that is connected with the hallsensor.  
+        int rightSensorValue = digitalRead();  
+        int leftSensorValue = digitalRead();
         
         
         if (frontSensorValue > hallSensorThreshold && leftSensorValue < 50) {
