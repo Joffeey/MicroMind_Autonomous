@@ -204,7 +204,7 @@ void queueNeighbors(int x, int y) {
     }
 }
 
-void moveToNeighbor(int direction) {
+void moveToNeighbor(int direction, int x, int y) {
     int dx = 0, dy = 0;
     if (direction == NORTH) {
         dy = 1;
@@ -219,10 +219,10 @@ void moveToNeighbor(int direction) {
         dx = -1;
     }
 
-    int newX = currentPos[0] + dx;
-    int newY = currentPos[1] + dy;
+    int newX = x + dx;
+    int newY = y + dy;
 
-    if (isValidCell(newX, newY) && !maze[currentPos[0]][currentPos[1]].walls[direction] && !maze[newX][newY].visited) {
+    if (isValidCell(newX, newY) && !maze[x][y].walls[direction] && !maze[newX][newY].visited) {
         if (!isBacktracking || (newX != dfsStack.top().first || newY != dfsStack.top().second)) {
             currentPos[0] = newX;
             currentPos[1] = newY;
@@ -408,7 +408,7 @@ int main(int argc, char* argv[]) {
 
         if (canMoveInDir) {
             std::cerr << "CanMoveInDir is true, so moving in direction" << std::endl;
-            moveToNeighbor(currOri);
+            moveToNeighbor(currOri, x, y);
             canMoveInDir = false;
             isBacktracking = false; // Reset the backtracking flag
         }
@@ -433,8 +433,7 @@ int main(int argc, char* argv[]) {
             else if (orrientationDiff == 3) {
                 turnLeft();
             }
-            moveToNeighbor(neighborOri);
-            dfsStack.pop();
+            moveToNeighbor(neighborOri, x, y);
 
             if (canMoveLeft || canMoveRight) {
                 if (canMoveLeft && canMoveRight && !visitedNeighbor(leftDirection) || !visitedNeighbor(rightDirection)) {
@@ -442,40 +441,41 @@ int main(int argc, char* argv[]) {
                     int randomDirection = randomInt(0, 1); // 0 for left, 1 for right
                     if (randomDirection == 0) {
                         turnLeft();
-                        moveToNeighbor(leftDirection);
-                        dfsStack.pop();
+                        moveToNeighbor(leftDirection, x, y);
+                        
                     }
                     else {
                         turnRight();
-                        moveToNeighbor(rightDirection);
-                        dfsStack.pop();
+                        moveToNeighbor(rightDirection, x, y);
+                        
                     }
                 }
                 else if (canMoveLeft) {
                     turnLeft();
-                    moveToNeighbor(leftDirection);
-                    dfsStack.pop();
+                    moveToNeighbor(leftDirection, x, y);
+                    
                 }
                 else if (canMoveRight) {
                     turnRight();
-                    moveToNeighbor(rightDirection);
-                    dfsStack.pop();
+                    moveToNeighbor(rightDirection, x, y);
+                    
                 }
                 else if (canMoveLeft && canMoveRight && visitedNeighbor(leftDirection) && visitedNeighbor(rightDirection)) {
                     int oppositeDirection = getOppositeDirection(currOri);
-                    dfsStack.pop();
+                    
                     turnRight(oppositeDirection);
                     currOri = oppositeDirection;
-                    moveToNeighbor(currOri);
+                    moveToNeighbor(currOri, x, y);
                 }
                 canMoveInDir = false;
                 isBacktracking = false; // Reset the backtracking flag
             }
             else {
                 // Dead-end, backtrack
-                dfsStack.pop();
                 isBacktracking = true;
-                std::cerr << "Dead-end, backtracking" << std::endl;
+                dfsStack.pop();
+                dfsStack.pop();
+                std::cerr << "Dead-end, backtracking stack top: (" << dfsStack.top().first << ", " << dfsStack.top().second << ")" << std::endl;
                 // Continue popping positions until you find one with unvisited neighbors
                 while (!dfsStack.empty()) {
                     std::pair<int, int> previousCell = dfsStack.top();
@@ -484,7 +484,20 @@ int main(int argc, char* argv[]) {
                     if (hasUnvisitedNeighbors(px, py)) {
                         // Found a position with unvisited neighbors, break the loop
                         std::cerr << "*** Last cell i was in have neighbors that are not visited! ***" << std::endl;
-                        break;
+                        int neighborOri = getNeighborOri(x, y, px, py);
+                        int orrientationDiff = (neighborOri - currOri + 4) % 4;
+                        if (orrientationDiff == 1) {
+                            turnRight();
+                        }
+                        else if (orrientationDiff == 2) {
+                            turnRight(2);
+                        }
+                        else if (orrientationDiff == 3) {
+                            turnLeft();
+                        }
+                        std::cerr << "Neighbor i wanna go to: " << px << ", " << py << ", current cell: " << x << ", " << y << std::endl;
+                        moveToNeighbor(neighborOri, x, y);
+                        dfsStack.pop();
                     }
                     else {
                         // No unvisited neighbors, continue backtracking
