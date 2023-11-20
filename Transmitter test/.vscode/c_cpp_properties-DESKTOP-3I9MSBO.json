@@ -1,0 +1,75 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/include",
+                "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/src",
+                "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/lib/NRF52_Radio",
+                "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/Adafruit microbit Library",
+                "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/Adafruit GFX Library",
+                "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/Adafruit BusIO",
+                "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/libraries/SPI",
+                "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/libraries/Wire",
+                "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5",
+                "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5/SDK/components/drivers_nrf/delay",
+                "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5/SDK/components/device",
+                "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5/SDK/components/toolchain",
+                "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5/SDK/components/toolchain/CMSIS/Include",
+                "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/variants/BBCmicrobitV2",
+                "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/BLEPeripheral/src",
+                "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/STM32duino LSM303AGR/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/include",
+                    "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/src",
+                    "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/lib/NRF52_Radio",
+                    "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/Adafruit microbit Library",
+                    "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/Adafruit GFX Library",
+                    "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/Adafruit BusIO",
+                    "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/libraries/SPI",
+                    "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/libraries/Wire",
+                    "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5",
+                    "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5/SDK/components/drivers_nrf/delay",
+                    "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5/SDK/components/device",
+                    "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5/SDK/components/toolchain",
+                    "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/cores/nRF5/SDK/components/toolchain/CMSIS/Include",
+                    "C:/Users/John_/.platformio/packages/framework-arduinonordicnrf5/variants/BBCmicrobitV2",
+                    "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/BLEPeripheral/src",
+                    "c:/Users/John_/OneDrive/Dokumenter/GitHub/MicroMind_Autonomous/Transmitter test/.pio/libdeps/bbcmicrobit_v2/STM32duino LSM303AGR/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60111",
+                "ARDUINO_BBC_MICROBIT_V2",
+                "NRF52833_XXAA",
+                "ARDUINO=10805",
+                "F_CPU=16000000L",
+                "ARDUINO_ARCH_NRF5",
+                "NRF5",
+                "USE_LFXO",
+                ""
+            ],
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++11",
+            "compilerPath": "C:/Users/John_/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/bin/arm-none-eabi-gcc.exe",
+            "compilerArgs": [
+                "-mthumb",
+                "-mcpu=cortex-m4",
+                "-mfloat-abi=softfp",
+                "-mfpu=fpv4-sp-d16",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}

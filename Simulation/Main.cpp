@@ -1,677 +1,506 @@
 #include <iostream>
 #include <string>
+#include <ctime>
 #include <vector>
 #include <stack>
 #include <queue>
 #include "API.h"
-#include "Cell.h"
-#include "Maze.h"
-#include "MazeGraph.h"
-#include <climits> 
 
-using namespace std;
+/*  Goal positions (X, Y): (7, 7), (7, 8), (8, 7), (8, 8)
+*   Starting position
+*/
+int currentPos[2] = { 0, 0 };
+const int MAZE_WIDTH = 16;
+const int MAZE_HEIGHT = 16;
 
-std::cout << print("Hello world");
+std::stack<std::pair<int, int>> dfsStack;
+bool isBacktracking = false;
 
-void log(const string& text);
-void exploreCell(vector<vector<Cell>>& map, int xCell, int yCell);
-void findStartToGoal(vector<vector<Cell>>& map, Coordinates goal);
-bool isGoal(int xCheck, int yCheck);
-bool matchGoal(Coordinates current, Coordinates goal);
-Cell& getFrontCell(vector<vector<Cell>>& map);
-Cell& getLeftCell(vector<vector<Cell>>& map);
-Cell& getRightCell(vector<vector<Cell>>& map);
-void getMinDistanceDirection(vector<vector<Cell>>& map, int& minDistance, char& minDirection);
-void floodOpenNeighbours(vector<vector<Cell>>& map, Coordinates goal);
-void moveInDirection(vector<vector<Cell>>& map, char direct);
-void updatePosition(char currentMove);
-void re_estimateCosts(vector<vector<Cell>>& map, Coordinates goal);
-void route(MazeGraph& graph,
-    vector<vector<Cell>>& map,
-    Coordinates start,
-    std::stack<Coordinates>& path);
-void followPath(vector<vector<Cell>>& map, std::stack<Coordinates>& path);
-void moveToNeighbouringCoordinates(vector<vector<Cell>>& map, int targetX, int targetY);
-void resetCost();
-const int mazeSize = 16; //16x16 maze
+/*  Global orientation
+*   0 = North  /\
+*   1 = East   >
+*   2 = South  \/
+*   3 = West   <
+*/
 
-char direction = 'N'; // current direction
 
-enum mode
-{
-    FIND_CENTRE,
-    FIND_START
+const int NORTH = 0;
+const int EAST = 1;
+const int SOUTH = 2;
+const int WEST = 3;
+
+struct Cell{
+    bool walls[4];
+    bool visited;
+   Cell() {
+    walls[NORTH] = false;
+    walls[EAST] = false;
+    walls[SOUTH] = false;
+    walls[WEST] = false;
+    visited = false;
+   }
 };
 
-mode searchMode = FIND_CENTRE;
-int x = 0, y = 0;
-Coordinates came_from[16][16];
-int cost_so_far[16][16] = { INT_MAX };
-bool done = false; // done flood fill
+Cell maze[MAZE_HEIGHT][MAZE_WIDTH];
 
-int main() {
+int currOri = 0;
+
+bool hasWallInDirection() {
+    int x = currentPos[0];
+    int y = currentPos[1];
+    if (currOri == 0) {         // FACING NORTH
+        if (API::wallFront()) {
+            maze[x][y].walls[NORTH] = true;
+        }
+        if (API::wallLeft()) {
+            maze[x][y].walls[WEST] = true;
+        }
+        if (API::wallRight()) {
+            maze[x][y].walls[EAST] = true;
+        }
+    }
+    if (currOri == 1) {        // FACING EAST
+        if (API::wallFront()) {
+            maze[x][y].walls[EAST] = true;
+        }
+        if (API::wallLeft()) {
+            maze[x][y].walls[NORTH] = true;
+        }
+        if (API::wallRight()) {
+            maze[x][y].walls[SOUTH] = true;
+        }
+    }
+    if (currOri == 2) {        // FACING SOUTH
+        if (API::wallFront()) {
+            maze[x][y].walls[SOUTH] = true;
+        }
+        if (API::wallLeft()) {
+            maze[x][y].walls[EAST] = true;
+        }
+        if (API::wallRight()) {
+            maze[x][y].walls[WEST] = true;
+        }
+    }
+    if (currOri == 3) {     // FACING WEST
+        if (API::wallFront()) {
+            maze[x][y].walls[WEST] = true;
+        }
+        if (API::wallLeft()) {
+            maze[x][y].walls[SOUTH] = true;
+        }
+        if (API::wallRight()) {
+            maze[x][y].walls[NORTH] = true;
+        }
+    }
+    std::cerr << "Current cell while facing: " << currOri << ", have walls: " << std::endl << "North: " << maze[x][y].walls[NORTH]
+        << std::endl << "East: " << maze[x][y].walls[EAST]
+        << std::endl << "South: " << maze[x][y].walls[SOUTH]
+        << std::endl << "West: " << maze[x][y].walls[WEST]
+        << std::endl << "Current cell is marked as visisted: " << maze[x][y].visited << std::endl;
+}
+
+bool isValidCell(int x, int y) {
+    return x >= 0 && x < MAZE_WIDTH && y >= 0 && y < MAZE_HEIGHT;
+}
+
+void checkNeighbors() {
+    int x = currentPos[0];
+    int y = currentPos[1];
+
+    if (currOri == NORTH) {
+        if (!API::wallLeft() && !maze[x - 1][y].visited && isValidCell(x - 1, y)) {
+            std::cerr << "Current left (west) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x - 1, y });
+        }
+        if (!API::wallFront() && !maze[x][y + 1].visited && isValidCell(x, y + 1)) {
+            std::cerr << "Current front (north) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x, y + 1 });
+        }
+        if (!API::wallRight() && !maze[x + 1][y].visited && isValidCell(x + 1, y)) {
+            std::cerr << "Current right (east) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x + 1, y});
+        }
+    }
+    else if (currOri == EAST) {
+        if (!API::wallLeft() && !maze[x][y + 1].visited && isValidCell(x, y + 1)) {
+            std::cerr << "Current left (north) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x, y + 1 });
+        }
+        if (!API::wallFront() && !maze[x + 1][y].visited && isValidCell(x + 1, y)) {
+            std::cerr << "Current front (east) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x + 1, y});
+        }
+        if (!API::wallRight() && !maze[x][y - 1].visited && isValidCell(x, y - 1)) {
+            std::cerr << "Current right (south) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x, y - 1 });
+        }
+    }
+    else if (currOri == SOUTH) {
+        if (!API::wallLeft() && !maze[x + 1][y].visited && isValidCell(x + 1, y)) {
+            std::cerr << "Current left (east) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x + 1, y });
+        }
+        if (!API::wallFront() && !maze[x][y - 1].visited && isValidCell(x, y - 1)) {
+            std::cerr << "Current front (south) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x, y - 1 });
+        }
+        if (!API::wallRight() && !maze[x - 1][y].visited && isValidCell(x - 1, y)) {
+            std::cerr << "Current right (west) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x - 1, y });
+        }
+    }
+    else if (currOri == WEST) {
+        if (!API::wallLeft() && !maze[x][y - 1].visited && isValidCell(x, y - 1)) {
+            std::cerr << "Current left (south) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x, y - 1 });
+        }
+        if (!API::wallFront() && !maze[x - 1][y].visited && isValidCell(x - 1, y)) {
+            std::cerr << "Current front (west) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x - 1, y });
+        }
+        if (!API::wallRight() && !maze[x][y + 1].visited && isValidCell(x, y + 1)) {
+            std::cerr << "Current right (north) neighbor should be checked out!" << std::endl;
+            dfsStack.push({ x, y + 1 });
+        }
+    }
+}
+
+void moveForward(int steps = 1) {
+    for (int i = 0; i < steps; i++) {
+        API::moveForward();
+        API::setColor(currentPos[0], currentPos[1], 'Y');
+        API::setText(currentPos[0], currentPos[1], "VIS");
+        maze[currentPos[0]][currentPos[1]].visited = true;
+    }
+
+}
+
+
+
+void queueNeighbors(int x, int y) {
+    if (isValidCell(x + 1, y) && !maze[x + 1][y].visited && !maze[x][y].walls[EAST]) {    // East neighbor
+        dfsStack.push({ x + 1, y });
+        API::setColor(x + 1, y, 'R');
+        API::setText(x + 1, y, "QUE");
+        std::cerr << "East neighbor queued!" << std::endl;
+    }
+    if (isValidCell(x - 1, y) && !maze[x - 1][y].visited && !maze[x][y].walls[WEST]) {    // West neighbor
+        dfsStack.push({ x - 1, y });
+        API::setColor(x - 1, y, 'R');
+        API::setText(x - 1, y, "QUE");
+        std::cerr << "West neighbor queued!" << std::endl;
+    }
+    if (isValidCell(x, y + 1) && !maze[x][y + 1].visited && !maze[x][y].walls[NORTH]) {    // North neighbor
+        dfsStack.push({ x, y + 1 });
+        API::setColor(x, y + 1, 'R');
+        API::setText(x, y + 1, "QUE");
+        std::cerr << "North neighbor queued!" << std::endl;
+    }
+    if (isValidCell(x, y - 1) && !maze[x][y - 1].visited && !maze[x][y].walls[SOUTH]) {   // South neighbor
+        dfsStack.push({ x, y - 1 });
+        API::setColor(x, y - 1, 'R');
+        API::setText(x, y - 1, "QUE");
+        std::cerr << "South neighbor queued!" << std::endl;
+    }
+}
+
+void moveToNeighbor(int direction) {
+    int dx = 0, dy = 0;
+    if (direction == NORTH) {
+        dy = 1;
+    }
+    else if (direction == EAST) {
+        dx = 1;
+    }
+    else if (direction == SOUTH) {
+        dy = -1;
+    }
+    else if (direction == WEST) {
+        dx = -1;
+    }
+
+    int newX = currentPos[0] + dx;
+    int newY = currentPos[1] + dy;
+
+    if (isValidCell(newX, newY) && !maze[currentPos[0]][currentPos[1]].walls[direction] && !maze[newX][newY].visited) {
+        if (!isBacktracking || (newX != dfsStack.top().first || newY != dfsStack.top().second)) {
+            currentPos[0] = newX;
+            currentPos[1] = newY;
+            moveForward();
+            hasWallInDirection();
+            queueNeighbors(newX, newY);
+            dfsStack.push({ newX, newY }); // pushing current cell, pushe neighbors?
+            isBacktracking = false;
+        }
+    }
+}
+
+bool visitedNeighbor(int direction) {
+    int dx = 0, dy = 0;
+    if (direction == NORTH) {
+        dy = 1;
+    }
+    else if (direction == EAST) {
+        dx = 1;
+    }
+    else if (direction == SOUTH) {
+        dy = -1;
+    }
+    else if (direction == WEST) {
+        dx = -1;
+    }
+    int neighborX = currentPos[0] + dx;
+    int neighborY = currentPos[1] + dy;
+
+    if (maze[neighborX][neighborY].visited) {
+        return true;
+    }
+    else {
+        return false;
+    }
+ }
+
+void log(const std::string& text) {
+    std::cerr << text << std::endl;
+}
+
+void logPos(int posArr[]) {
+    std::cerr << "Current position (X,Y): (" << posArr[0] << ", " << posArr[1] << ")" << std::endl;
+}
+
+void logInt(int printInt) {
+    std::cerr << "Current Orientation: " << currOri << std::endl;
+}
+
+void updateOri(int turnDir) {
+    int sampleOri = currOri;
+    currOri = (((currOri + turnDir)%4) + 4) % 4;
+    std::cerr << "Current Orientation after executing: (" << sampleOri << " + " << turnDir << ") % 4 = " << currOri << std::endl;
+}
+
+void updatePos(int moveDirection = 1) {
+    if (currOri == 0) {         // Facing North
+        currentPos[1] = currentPos[1] + moveDirection;
+    }
+    else if (currOri == 1) {    // Facing East
+        currentPos[0] = currentPos[0] + moveDirection;
+    }
+    else if (currOri == 2) {    // Facing South
+        currentPos[1] = currentPos[1] - moveDirection;
+    }
+    else if(currOri == 3){      // Facing West
+        currentPos[0] = currentPos[0] - moveDirection;
+    }
+}
+
+
+
+void turnLeft(int steps = 1) {
+    for (int i = 0; i < steps; i++) {
+        API::turnLeft();
+        updateOri(-1);
+    }
+}
+
+void turnRight(int steps = 1) {
+    for (int i = 0; i < steps; i++) {
+        API::turnRight();
+        updateOri(1);
+    }
+}
+
+int randomInt(int min, int max) {
+    unsigned int seed = static_cast<unsigned int>(time(0));
+    srand(seed);
+    return min + rand() % (max - min + 1);
+}
+
+
+
+bool hasUnvisitedNeighbors(int x, int y) {
+    // Check if there are unvisited neighbors from the current cell
+    return (!maze[x][y].walls[NORTH] && !maze[x][y + 1].visited) ||
+        (!maze[x][y].walls[EAST] && !maze[x + 1][y].visited) ||
+        (!maze[x][y].walls[SOUTH] && !maze[x][y - 1].visited) ||
+        (!maze[x][y].walls[WEST] && !maze[x - 1][y].visited);
+}
+
+int getOppositeDirection(int direction) {
+    return (direction + 2) % 4;
+}
+
+int getNeighborOri(int x, int y, int dx, int dy) {
+    if (x > dx) {
+        return WEST;
+    }
+    else if (x < dx) {
+        return EAST;
+    }
+    else if (y > dy) {
+        return SOUTH;
+    }
+    else if (y < dy) {
+        return NORTH;
+    }
+}
+
+
+int main(int argc, char* argv[]) {
+    log("Running...");
+    std::cerr << "0 = North" << std::endl << "1 = East" << std::endl << "2 = South" << std::endl << "3 = West" << std::endl;
+
+    API::setColor(0, 0, 'G');
     API::setText(0, 0, "Start");
-    API::setColor(0, 0, 'Y');
 
-    vector<vector<Cell>> map(mazeSize, vector<Cell>(mazeSize));
+    API::setColor(7, 7, 'Y');
+    API::setText(7, 7, "Goal");
+    API::setColor(7, 8, 'Y');
+    API::setText(7, 8, "Goal");
+    API::setColor(8, 7, 'Y');
+    API::setText(8, 7, "Goal");
+    API::setColor(8, 8, 'Y');
+    API::setText(8, 8, "Goal");
 
-    resetCost();
-    log("Started flood fill to explore  the maze...");
-
-    Maze::initializeMaze(map, mazeSize);
-
-    findStartToGoal(map, Coordinates{ 8, 8 });
-
-    // get all unexplored cells
-    queue<Coordinates> unexploredCells;
-    for (int i = 0; i < mazeSize; i++)
-    {
-        for (int j = 0; j < mazeSize; j++)
-        {
-            if (!map[i][j].getHasBeenExplored())
-            {
-                unexploredCells.push(Coordinates{ i, j });
-            }
+    // Initialize the visisted array to all false at start
+    for (int i = 0; i < MAZE_HEIGHT; i++) {
+        for (int j = 0; j < MAZE_WIDTH; j++) {
+            maze[i][j].visited = false;
         }
     }
 
-    // generate complete map while (!unexploredCells.empty())
-    while (!unexploredCells.empty())
-    {
-        Coordinates goal = unexploredCells.front();
-        unexploredCells.pop();
-        if (!map[goal.x][goal.y].getHasBeenExplored())
-        {
-            re_estimateCosts(map, goal);
-            findStartToGoal(map, goal);
-        }
-    }
+    // Initially pushing the only two options for next move as we spawn in the left most corner, north or east is the only two possabilities.
+    dfsStack.push({ 0, 0 });
+    /*
+    *   Stack after initial push
+    *   [0, 0]
+    */
 
-    // Ended flood fill now return to start position
-    done = true;
-    MazeGraph graph(map, mazeSize, mazeSize);
-    stack<Coordinates> path;
-    log("Back to starting point...");
+    maze[currentPos[0]][currentPos[1]].visited = true;
+    std::cerr << "(X, Y):  (" << dfsStack.top().first << ", " << dfsStack.top().second << ")" << std::endl;
+    bool mustTurn = false;
+    bool canMove = false; // Flag to check if you can move in any direction
+    bool canMoveInDir = false;
+    std::cerr << "Can moveInDir is currently false: " << canMoveInDir << std::endl;
 
-    searchMode = FIND_START;
-    route(graph, map, Coordinates{ x, y }, path);
-    followPath(map, path);
+    while (!dfsStack.empty()) {
+        std::pair<int, int> currentCell = dfsStack.top();
+        int x = currentCell.first;
+        int y = currentCell.second;
 
-    // Route to goal
-    log("Going to gaol...");
-    resetCost();
-    searchMode = FIND_CENTRE;
-    route(graph, map, Coordinates{ 0, 0 }, path);
-
-    API::ackReset();
-    direction = 'N';
-    followPath(map, path);
-
-
-    log("Ended");
-}
-
-void log(const string& text) {
-    cerr << text << endl;
-}
-void resetCost() {
-    for (auto& i : cost_so_far) {
-        for (int& j : i) {
-            j = INT_MAX;
-        }
-    }
-}
-void route(MazeGraph& graph,
-    vector<vector<Cell>>& map,
-    Coordinates start,
-    std::stack<Coordinates>& path)
-{
-
-
-    vector<pair<Coordinates, int>> cells;
-
-    cells.emplace_back(start, 0);
-
-    came_from[start.x][start.y] = start;
-    cost_so_far[start.x][start.y] = 0;
-    Coordinates G = { -1, -1 };
-    while (!cells.empty())
-    {
-        // get
-
-        int i = 0, max = cells[0].second;
-        for (int j = 1; j < cells.size(); ++j) {
-            if (cells[i].second > max) {
-                i = j;
-                max = cells[i].second;
-            }
-        }
-        Coordinates current = cells[i].first;
-        cells.erase(cells.begin() + i);
-        if (isGoal(current.x, current.y))
-        {
-            G = current;
+        // Check for the goal condition before making a move
+        if ((x == 7 && y == 7) || (x == 7 && y == 8) || (x == 8 && y == 7) || (x == 8 && y == 8)) {
+            log("Goal reached!");
             break;
         }
 
-        for (Coordinates next : graph.neighbors(current))
-        {
-            int new_cost = cost_so_far[current.x][current.y] + graph.cost(map, current, next);
-            if (cost_so_far[next.x][next.y] == INT_MAX || new_cost < cost_so_far[next.x][next.y])
-            {
-                cost_so_far[next.x][next.y] = new_cost;
+        maze[x][y].visited = true;
 
-                cells.emplace_back(next, new_cost);
-                came_from[next.x][next.y] = current;
+        hasWallInDirection();
+        checkNeighbors();
+        std::cerr << "Current position before checking anything (X, Y): (" << x << ", " << y << ")" << std::endl;
+
+        bool canMoveInDir = false; // Reset canMoveInDir here
+
+        if (!maze[x][y].walls[currOri]) {
+            canMoveInDir = true;
+            std::cerr << "CanMoveInDir set to true!" << std::endl;
+        }
+
+        if (canMoveInDir) {
+            std::cerr << "CanMoveInDir is true, so moving in direction" << std::endl;
+            moveToNeighbor(currOri);
+            canMoveInDir = false;
+            isBacktracking = false; // Reset the backtracking flag
+        }
+        else {
+            int rightDirection = (currOri + 1) % 4;
+            int leftDirection = (currOri + 3) % 4;
+            int orrientationDiff = 0;
+            std::cerr << "Orientation: " << currOri << ", leftDirection: " << leftDirection << ", rightDirection: " << rightDirection << std::endl;
+            std::cerr << "CanMoveInDir is false, so checking sides" << std::endl;
+            bool canMoveLeft = !maze[x][y].walls[leftDirection];
+            bool canMoveRight = !maze[x][y].walls[rightDirection];
+            int dx = dfsStack.top().first;
+            int dy = dfsStack.top().second;
+            int neighborOri = getNeighborOri(x, y, dx, dy);
+            orrientationDiff = (neighborOri - currOri + 4) % 4;
+            if (orrientationDiff == 1) {
+                turnRight();
             }
-        }
-    }
-
-    // reconstrucnt path
-    Coordinates current = G;
-    int t = 0;
-    while (!(current == start))
-    {
-        path.push(current);
-        current = came_from[current.x][current.y];
-        t++;
-    }
-
-    path.push(current);
-}
-void findStartToGoal(vector<vector<Cell>>& map, Coordinates goal)
-{
-
-    bool destinationFound = false;
-    int minDistance;
-    char minDirection;
-    // alias for conveneience
-    while (!destinationFound)
-    {
-        exploreCell(map, x, y); // explore current cell
-        minDistance = mazeSize * 5;
-
-        // if goal fount-> exit while loop
-        if (matchGoal(Coordinates{ x, y }, goal))
-        {
-            destinationFound = true;
-        }
-        if (!destinationFound)
-        {
-            getMinDistanceDirection(map, minDistance, minDirection);
-            // check if reflooding is required
-
-            if ((map[x][y].getFloodFillCost() != 1 + minDistance))
-            {
-                // reflood
-                floodOpenNeighbours(map, goal);
-
-                // after reflooding get new min distance neighbours
-                getMinDistanceDirection(map, minDistance, minDirection); //get neighbour with lowest distance
+            else if (orrientationDiff == 2) {
+                turnRight(2);
             }
-
-            moveInDirection(map, minDirection);
-        }
-    }
-}
-
-void exploreCell(vector<vector<Cell>>& map, int xCell, int yCell)
-{
-    // map[xCell][yCell].setVisited(); // first visit is straight, then right, then left, then back
-    if (map[xCell][yCell].getHasBeenExplored())
-    {
-        return;
-    }
-
-    map[xCell][yCell].sethasBeenExplored(true);
-    switch (direction)
-    {
-    case 'N':
-
-        map[xCell][yCell].setNorthWall(API::wallFront());
-
-        map[xCell][yCell].setEastWall(API::wallRight());
-        map[xCell][yCell].setWestWall(API::wallLeft());
-
-        break;
-    case 'S':
-
-        map[xCell][yCell].setSouthWall(API::wallFront());
-        map[xCell][yCell].setEastWall(API::wallLeft());
-        map[xCell][yCell].setWestWall(API::wallRight());
-        break;
-    case 'W':
-
-        map[xCell][yCell].setWestWall(API::wallFront());
-        map[xCell][yCell].setSouthWall(API::wallLeft());
-        map[xCell][yCell].setNorthWall(API::wallRight());
-        break;
-    case 'E':
-
-        map[xCell][yCell].setEastWall(API::wallFront());
-        map[xCell][yCell].setNorthWall(API::wallLeft());
-        map[xCell][yCell].setSouthWall(API::wallRight());
-        break;
-    default:
-        ;
-    }
-}
-
-bool isGoal(int xCheck, int yCheck)
-{
-    if (searchMode == FIND_CENTRE)
-        return ((xCheck == 7 || xCheck == 8) && (yCheck == 7 || yCheck == 8));
-    else
-        return ((xCheck == 0) && (yCheck == 0));
-}
-
-bool matchGoal(Coordinates current, Coordinates goal)
-{
-    return (current.x == goal.x && current.y == goal.y);
-}
-bool isSafe(int X, int Y)
-{
-    if (X < 0 || X > mazeSize - 1)
-        return false;
-    if (Y < 0 || Y > mazeSize - 1)
-        return false;
-    return true;
-}
-void getMinDistanceDirection(vector<vector<Cell>>& map, int& minDistance, char& minDirection)
-{
-    switch (searchMode)
-    {
-    case FIND_CENTRE:
-        if (!API::wallFront())
-        {
-            Cell front = getFrontCell(map);
-
-            if (minDistance > front.getFloodFillCost())
-            {
-                minDistance = front.getFloodFillCost();
-                minDirection = 'f';
+            else if (orrientationDiff == 3) {
+                turnLeft();
             }
-        }
-        if (!API::wallLeft())
-        {
-            Cell left = getLeftCell(map);
-            if (minDistance > left.getFloodFillCost())
-            {
-                minDistance = left.getFloodFillCost();
-                minDirection = 'l';
-            }
-        }
-        if (!API::wallRight())
-        {
-            Cell right = getRightCell(map);
-            if (minDistance > right.getFloodFillCost())
-            {
-                minDistance = right.getFloodFillCost();
-                minDirection = 'r';
-            }
-        }
-        if (map[x][y].getPrevVisitedCell() != nullptr)
-        {
-            Cell* back = map[x][y].getPrevVisitedCell();
-            if (minDistance > back->getFloodFillCost())
-            {
-                minDistance = back->getFloodFillCost();
-                minDirection = 'b';
-            }
-        }
-        break;
-    case FIND_START:
-        if (!API::wallFront())
-        {
-            Cell front = getFrontCell(map);
+            moveToNeighbor(neighborOri);
+            dfsStack.pop();
 
-            if (minDistance > front.getReverseFloodFillCost())
-            {
-                minDistance = front.getReverseFloodFillCost();
-                minDirection = 'f';
-            }
-        }
-        if (!API::wallLeft())
-        {
-            Cell left = getLeftCell(map);
-            if (minDistance > left.getReverseFloodFillCost())
-            {
-                minDistance = left.getReverseFloodFillCost();
-                minDirection = 'l';
-            }
-        }
-        if (!API::wallRight())
-        {
-            Cell right = getRightCell(map);
-            if (minDistance > right.getReverseFloodFillCost())
-            {
-                minDistance = right.getReverseFloodFillCost();
-                minDirection = 'r';
-            }
-        }
-        if (map[x][y].getPrevVisitedCell() != nullptr)
-        {
-            Cell* back = map[x][y].getPrevVisitedCell();
-            if (minDistance > back->getReverseFloodFillCost())
-            {
-                minDistance = back->getReverseFloodFillCost();
-                minDirection = 'b';
-            }
-        }
-
-        break;
-    default:
-        ;
-    }
-}
-void floodOpenNeighbours(vector<vector<Cell>>& map, Coordinates goal)
-{
-
-    stack<Coordinates> floodStack;
-    int minDistance;
-    int cellX, cellY;
-    floodStack.push(Coordinates({ x, y }));
-    while (!floodStack.empty())
-    {
-        cellX = floodStack.top().x;
-        cellY = floodStack.top().y;
-
-        floodStack.pop();
-        if (matchGoal(Coordinates{ cellX, cellY }, goal))
-            continue;
-
-        Cell cell = map[cellX][cellY];
-
-        if (cell.getHasBeenExplored())
-        {
-
-            int D1 = (!map[cellX][cellY].hasNorthWall()) ? map[cellX][cellY + 1].getFloodFillCost() : mazeSize * 2;
-            int D2 = (!map[cellX][cellY].hasSouthWall()) ? map[cellX][cellY - 1].getFloodFillCost() : mazeSize * 2;
-            int D3 = (!map[cellX][cellY].hasWestWall()) ? map[cellX - 1][cellY].getFloodFillCost() : mazeSize * 2;
-            int D4 = (!map[cellX][cellY].hasEastWall()) ? map[cellX + 1][cellY].getFloodFillCost() : mazeSize * 2;
-            minDistance = min(D1, D2);
-            minDistance = min(minDistance, D3);
-            minDistance = min(minDistance, D4);
-            //----------add to stack
-
-            if (map[cellX][cellY].getFloodFillCost() != 1 + minDistance)
-            {
-                map[cellX][cellY].setFloodFillCost(1 + minDistance);
-
-                if (!map[cellX][cellY].hasNorthWall())
-                {
-                    floodStack.push(Coordinates{ cellX, cellY + 1 });
+            if (canMoveLeft || canMoveRight) {
+                if (canMoveLeft && canMoveRight && !visitedNeighbor(leftDirection) || !visitedNeighbor(rightDirection)) {
+                    // If both left and right are possible, choose one randomly
+                    int randomDirection = randomInt(0, 1); // 0 for left, 1 for right
+                    if (randomDirection == 0) {
+                        turnLeft();
+                        moveToNeighbor(leftDirection);
+                        dfsStack.pop();
+                    }
+                    else {
+                        turnRight();
+                        moveToNeighbor(rightDirection);
+                        dfsStack.pop();
+                    }
                 }
-                if (!map[cellX][cellY].hasSouthWall())
-                {
-                    floodStack.push(Coordinates{ cellX, cellY - 1 });
+                else if (canMoveLeft) {
+                    turnLeft();
+                    moveToNeighbor(leftDirection);
+                    dfsStack.pop();
                 }
-                if (!map[cellX][cellY].hasWestWall())
-                {
-                    floodStack.push(Coordinates{ cellX - 1, cellY });
+                else if (canMoveRight) {
+                    turnRight();
+                    moveToNeighbor(rightDirection);
+                    dfsStack.pop();
                 }
-                if (!map[cellX][cellY].hasEastWall())
-                {
-                    floodStack.push(Coordinates{ cellX + 1, cellY });
+                else if (canMoveLeft && canMoveRight && visitedNeighbor(leftDirection) && visitedNeighbor(rightDirection)) {
+                    int oppositeDirection = getOppositeDirection(currOri);
+                    dfsStack.pop();
+                    turnRight(oppositeDirection);
+                    currOri = oppositeDirection;
+                    moveToNeighbor(currOri);
+                }
+                canMoveInDir = false;
+                isBacktracking = false; // Reset the backtracking flag
+            }
+            else {
+                // Dead-end, backtrack
+                dfsStack.pop();
+                isBacktracking = true;
+                std::cerr << "Dead-end, backtracking" << std::endl;
+                // Continue popping positions until you find one with unvisited neighbors
+                while (!dfsStack.empty()) {
+                    std::pair<int, int> previousCell = dfsStack.top();
+                    int px = previousCell.first;
+                    int py = previousCell.second;
+                    if (hasUnvisitedNeighbors(px, py)) {
+                        // Found a position with unvisited neighbors, break the loop
+                        std::cerr << "*** Last cell i was in have neighbors that are not visited! ***" << std::endl;
+                        break;
+                    }
+                    else {
+                        // No unvisited neighbors, continue backtracking
+                        dfsStack.pop();
+                        std::cerr << "Backtracking... (X, Y): (" << px << ", " << py << ")" << std::endl;
+                    }
                 }
             }
         }
-        else
-        {
 
-            // a cell that has not been explored has no walls so all neighbours are accessible
-            int d1 = isSafe(cellX + 1, cellY) ? map[cellX + 1][cellY].getFloodFillCost() : mazeSize * 2;
-            int d2 = isSafe(cellX - 1, cellY) ? map[cellX - 1][cellY].getFloodFillCost() : mazeSize * 2;
-            int d3 = isSafe(cellX, cellY + 1) ? map[cellX][cellY + 1].getFloodFillCost() : mazeSize * 2;
-            int d4 = isSafe(cellX, cellY - 1) ? map[cellX][cellY - 1].getFloodFillCost() : mazeSize * 2;
-            int minD = min(d1, d2);
-            minD = min(minD, d3);
-            minD = min(minD, d4);
-            if (map[cellX][cellY].getFloodFillCost() != 1 + minD)
-            {
-                map[cellX][cellY].setFloodFillCost(1 + minD);
-
-                if (isSafe(cellX + 1, cellY))
-                {
-                    floodStack.push(Coordinates{ cellX + 1, cellY });
-                }
-                if (isSafe(cellX - 1, cellY))
-                {
-                    floodStack.push(Coordinates{ cellX - 1, cellY });
-                }
-                if (isSafe(cellX, cellY + 1))
-                {
-                    floodStack.push(Coordinates{ cellX, cellY + 1 });
-                }
-                if (isSafe(cellX, cellY - 1))
-                {
-                    floodStack.push(Coordinates{ cellX, cellY - 1 });
-                }
-            }
+        // Check for the goal condition after making a move or rotation
+        if ((x == 7 && y == 7) || (x == 7 && y == 8) || (x == 8 && y == 7) || (x == 8 && y == 8)) {
+            log("Goal reached!");
+            break;
         }
-    }
-}
-void moveInDirection(vector<vector<Cell>>& map, char direct)
-{
-    // move to the  neighbouring cell with the lowest distance cost
-    int prevX = x, prevY = y;
-    if (direct == 'f')
-    {
-        API::moveForward();
-        updatePosition('f');
-    }
-    else if (direct == 'l')
-    {
-        API::turnLeft();
-        updatePosition('l');
-        API::moveForward();
-        updatePosition('f');
-    }
 
-    else if (direct == 'r')
-    {
-
-        API::turnRight();
-        updatePosition('r');
-        API::moveForward();
-        updatePosition('f');
-    }
-    else if (direct == 'b')
-    {
-        API::turnRight();
-        updatePosition('r');
-        API::turnRight();
-        updatePosition('r');
-        API::moveForward();
-        updatePosition('f');
-    }
-
-    map[x][y].setPrevVisitedCell(&map[prevX][prevY]);
-
-    if (!done)
-        API::setColor(x, y, 'Y');
-    else if (searchMode == FIND_CENTRE)
-        API::setColor(x, y, 'R');
-    else
-        API::setColor(x, y, 'B');
-}
-void updatePosition(char currentMove)
-{
-    // update the direction and coordinates
-    switch (direction)
-    {
-    case 'N':
-        if (currentMove == 'l')
-            direction = 'W';
-        else if (currentMove == 'r')
-            direction = 'E';
-
-        else if (currentMove == 'f')
-            ++y;
-        break;
-    case 'S':
-        if (currentMove == 'l')
-            direction = 'E';
-        else if (currentMove == 'r')
-            direction = 'W';
-        else if (currentMove == 'f')
-            --y;
-        break;
-    case 'E':
-        if (currentMove == 'l')
-            direction = 'N';
-        else if (currentMove == 'r')
-            direction = 'S';
-        else if (currentMove == 'f')
-            ++x;
-        break;
-    case 'W':
-        if (currentMove == 'l')
-            direction = 'S';
-        else if (currentMove == 'r')
-            direction = 'N';
-        else if (currentMove == 'f')
-            --x;
-        break;
-    default:
-        x = 0, y = 0;
-    }
-}
-
-void re_estimateCosts(vector<vector<Cell>>& map, Coordinates goal)
-{
-    for (int i = 0; i < mazeSize; i++)
-    {
-        for (int j = 0; j < mazeSize; j++)
-        {
-            int X = abs(i - goal.x);
-            int Y = abs(j - goal.y);
-            int floodFillCost = X + Y;
-            map[i][j].setFloodFillCost(floodFillCost);
-        }
-    }
-}
-
-void followPath(vector<vector<Cell>>& map, std::stack<Coordinates>& path)
-{
-    // while stack not empty get next coordinate
-    // move to next neighbour
-    if (done && searchMode == FIND_CENTRE) {
-        cerr << "Needs " << path.size() << " iterations\n";
-    }
-
-    while (!path.empty())
-    {
-        moveToNeighbouringCoordinates(map, path.top().x, path.top().y);
-        path.pop();
-    }
-}
-void moveToNeighbouringCoordinates(vector<vector<Cell>>& map, int targetX, int targetY)
-{
-    switch (direction)
-    {
-
-    case 'N':
-        if (targetX == (x - 1))
-            moveInDirection(map, 'l');
-        else if (targetX == (x + 1))
-            moveInDirection(map, 'r');
-        else if (targetY == (y + 1))
-            moveInDirection(map, 'f');
-        else if (targetY == (y - 1))
-            moveInDirection(map, 'b');
-        break;
-
-    case 'S':
-        if (targetX == (x - 1))
-            moveInDirection(map, 'r');
-        else if (targetX == (x + 1))
-            moveInDirection(map, 'l');
-        else if (targetY == (y + 1))
-            moveInDirection(map, 'b');
-        else if (targetY == (y - 1))
-            moveInDirection(map, 'f');
-        break;
-
-    case 'E':
-        if (targetX == (x - 1))
-            moveInDirection(map, 'b');
-        else if (targetX == (x + 1))
-            moveInDirection(map, 'f');
-        else if (targetY == (y + 1))
-            moveInDirection(map, 'l');
-        else if (targetY == (y - 1))
-            moveInDirection(map, 'r');
-        break;
-
-    case 'W':
-        if (targetX == (x - 1))
-            moveInDirection(map, 'f');
-        else if (targetX == (x + 1))
-            moveInDirection(map, 'b');
-        else if (targetY == (y + 1))
-            moveInDirection(map, 'r');
-        else if (targetY == (y - 1))
-            moveInDirection(map, 'l');
-        break;
-
-    default:
-        return;
-    }
-}
-
-// doesnt check if coordinates are within boundaries
-Cell& getFrontCell(vector<vector<Cell>>& map)
-{
-
-    switch (direction)
-    {
-    case 'N':
-        return map[x][y + 1];
-    case 'S':
-        return map[x][y - 1];
-    case 'E':
-        return map[x + 1][y];
-    case 'W':
-        return map[x - 1][y];
-    default:
-        return map[x][y];
-    }
-}
-
-Cell& getLeftCell(vector<vector<Cell>>& map)
-{
-
-    switch (direction)
-    {
-    case 'N':
-        return map[x - 1][y];
-    case 'S':
-        return map[x + 1][y];
-    case 'E':
-        return map[x][y + 1];
-    case 'W':
-        return map[x][y - 1];
-    default:
-        return map[x][y];
-
-    }
-}
-
-Cell& getRightCell(vector<vector<Cell>>& map)
-{
-
-    switch (direction)
-    {
-    case 'N':
-        return map[x + 1][y];
-    case 'S':
-        return map[x - 1][y];
-    case 'E':
-        return map[x][y - 1];
-    case 'W':
-        return map[x][y + 1];
-    default:
-        return map[x][y];
+        std::cerr << "Can move in dir? " << canMoveInDir << std::endl;
     }
 }

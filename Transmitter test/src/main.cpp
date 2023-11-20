@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include <NRF52_Radio_library.h>
 #include <Adafruit_Microbit.h>
+#include <Adafruit_LSM303_Accel.h>
+
+
+Adafruit_LSM303_Accel_Unified accel = Adafruit_LSM303_Accel_Unified(54321);
 
 NRF52_Radio radio = NRF52_Radio();
 Adafruit_Microbit_Matrix display;
@@ -15,15 +19,13 @@ const int radioFrequency = 7; // 2.407GHz Radio
 const int protocol = 14;
 const int radioVersion = 12;
 const uint8_t dataGroup = 1;
-const uint8_t confirmationGroup = 2;
 bool sendAccelDataFlag = false;
 
 
-enum Mode {MANUAL, AUTO};
-Mode currentMode = MANUAL;
+enum Mode {MANUAL, AUTO, STARTUP};
+Mode currentMode = STARTUP;
 
 // Button
-const int buttonAPin = PIN_BUTTON_A;
 const int debounceDelay = 100;
 
 
@@ -31,55 +33,35 @@ const int debounceDelay = 100;
 bool waitForConfirmation(){
   unsigned long startTime = millis();
   while(millis() - startTime < 2000){
-    radio.setGroup(confirmationGroup);
     recievedData = radio.recv();
-    if(recievedData->group == 2){
+    if(recievedData->group == 1 && recievedData->protocol == 14){
       if(recievedData->payload[0] == 'C'){
         Serial.println("Recieved confirmation!");
         delete recievedData;
-        radio.setGroup(dataGroup);
         return true;
         
       }
-      Serial.println("Data recieved belongs to correct protocol, but it's not 'C'!");
+      Serial.println("Data recieved belongs to correct protocol and group, but it's not 'C'!");
       Serial.println("Recieved confirmation contains: " + String(recievedData->payload[0]));
       delete recievedData;
-      radio.setGroup(dataGroup);
-      return false;  // Recieved verification!
+      return false;
     }
   }
   Serial.println("No confirmation recieved!");
   Serial.println("The recieved data with correct protocol contains: " + String(recievedData->payload[0]));
-  radio.setGroup(dataGroup);
   return false; // Confirmation not received
 }
 
-void sendCurrentMode(){
-  if(currentMode == MANUAL){
+void sendMode(char mode){
+  if(mode == 'M'){
     myModeSendMode->payload[0] = 'M';
     radio.send(myModeSendMode);
     Serial.println("Sent 'M'");
   }
-  else if(currentMode == AUTO){
+  else if(mode == 'A'){
     myModeSendMode->payload[0] = 'A';
     radio.send(myModeSendMode);
     Serial.println("Sent 'A'");
-  }
-  else{
-    Serial.println("Not valid current mode!");
-  }
-}
-
-void sendOppositeMode(){
-  if(currentMode == MANUAL){
-    myModeSendMode->payload[0] = 'A';
-    radio.send(myModeSendMode);
-    Serial.println("Sent 'A'");
-  }
-  else if(currentMode == AUTO){
-    myModeSendMode->payload[0] = 'M';
-    radio.send(myModeSendMode);
-    Serial.println("Sent 'M'");
   }
   else{
     Serial.println("Not valid current mode!");
@@ -88,88 +70,106 @@ void sendOppositeMode(){
 
 void sendAccelData(){
   // Code to send over accelerometer data while the state continues to be manual up until the point where the user decides to switch to auto mode!
-
-  myAccelSendAccel->payload[0] = 'F';
-  radio.send(myAccelSendAccel);
-  delay(200);
-  myAccelSendAccel->payload[0] = 'B';
-  radio.send(myAccelSendAccel);
-  delay(200);
-  myAccelSendAccel->payload[0] = 'F';
-  radio.send(myAccelSendAccel);
-  delay(200);
-  myAccelSendAccel->payload[0] = 'B';
-  radio.send(myAccelSendAccel);
-  delay(200);
-}
-
-void changeMode(){
-  display.clear();
-  if(currentMode == AUTO){
-    sendOppositeMode();
-    Serial.println("Requesting mode change to MANUAL, transmitting 'M' and awaiting verification!");
-      if(radio.dataReady() > 0){
-        Serial.println("There's data ready for us!");
-        if(waitForConfirmation()){
-        Serial.println("Mode change confirmed, Switching to MANUAL mode.");
-        currentMode = MANUAL;
-        sendAccelDataFlag = true;
-        display.drawLine(0, 0, 0, 4, LED_ON);
-        display.drawLine(4, 0, 4, 4, LED_ON);
-        display.drawLine(1, 1, 2, 2, LED_ON);
-        display.drawLine(3,1, 3, 1, LED_ON);
-        sendAccelData();
-        }
-    }
+  sensors_event_t event;
+  accel.getEvent(&event);
+  if(event.acceleration.y >= 8){
+      myAccelSendAccel->payload[0] = 'F';
+      radio.send(myAccelSendAccel);
   }
-  else if(currentMode == MANUAL){
-    sendOppositeMode();
-    Serial.println("Requesting mode change to AUTO, transmitting 'A' and awaiting verification!");
+  if(event.acceleration.y <= -8){
+    myAccelSendAccel->payload[0] = 'B';
+    radio.send(myAccelSendAccel);
+  }
+  if(event.acceleration.x >= 8){
+    myAccelSendAccel->payload[0] = 'R';
+    radio.send(myAccelSendAccel);
+  }
+  if(event.acceleration.x <= -8){
+    myAccelSendAccel->payload[0] = 'L';
+    radio.send(myAccelSendAccel);
+  }
+  if(event.acceleration.z <= -9){
+    myAccelSendAccel->payload[0] = 'S';
+    radio.send(myAccelSendAccel);
+  }
+}
+
+void changeMode(char mode){
+  display.clear();
+  if(mode == 'M' || mode == 'A'){
+    sendMode(mode);
+    Serial.println("Requesting mode change, transmitting and awaiting verification!");
       if(radio.dataReady() > 0){
         Serial.println("There's data ready for us!");
         if(waitForConfirmation()){
-        Serial.println("Mode change confirmed, Switching to AUTO mode.");
-        currentMode = AUTO;
-        sendAccelDataFlag = false;
-       // Draw 'A' in the matrix -- not needed but for fun
-       display.drawLine(0, 0, 0, 4, LED_ON);
-       display.drawLine(4, 0, 4, 4, LED_ON);
-       display.drawLine(1, 0, 3, 0, LED_ON);
-       display.drawLine(1, 2, 3, 2, LED_ON);
-     }
-   }
-   else{
-    Serial.println("There's no data for us -> Returning.");
-    if(digitalRead(buttonAPin) == LOW){
-      Serial.print("Im printing out this inside the changemode because button is still low");
-    }
-    return;
-   }
- }
+        Serial.println("Mode change confirmed, Switching mode.");
+        if(mode == 'A'){
+          currentMode = AUTO;
+          sendAccelDataFlag = false;
+          display.drawLine(0, 0, 0, 4, LED_ON);
+          display.drawLine(4, 0, 4, 4, LED_ON);
+          display.drawLine(1, 0, 3, 0, LED_ON);
+          display.drawLine(1, 2, 3, 2, LED_ON);
+        }
+        else if(mode == 'M'){
+          currentMode = MANUAL;
+          sendAccelDataFlag = true;
+          display.drawLine(0, 0, 0, 4, LED_ON);
+          display.drawLine(4, 0, 4, 4, LED_ON);
+          display.drawLine(1, 1, 2, 2, LED_ON);
+          display.drawLine(3,1, 3, 1, LED_ON);
+          sendAccelData();
+        }
+        }
+        }
+        else{
+          Serial.println("There's no data for us -> Returning.");
+          if(currentMode == MANUAL){
+            display.drawLine(0, 0, 0, 4, LED_ON);
+            display.drawLine(4, 0, 4, 4, LED_ON);
+            display.drawLine(1, 1, 2, 2, LED_ON);
+            display.drawLine(3,1, 3, 1, LED_ON);
+            }
+         else if(currentMode == AUTO){
+          display.drawLine(0, 0, 0, 4, LED_ON);
+          display.drawLine(4, 0, 4, 4, LED_ON);
+          display.drawLine(1, 0, 3, 0, LED_ON);
+          display.drawLine(1, 2, 3, 2, LED_ON);
+          }
+         else{
+          display.drawLine(0, 0, 4, 0, LED_ON);
+          display.drawLine(0, 2, 4, 2, LED_ON);
+          display.drawLine(0, 4, 4, 4, LED_ON);
+          display.drawPixel(0, 1, LED_ON);
+          display.drawPixel(4, 3, LED_ON);
+          }   
+        }
+  }
 }
 
-void checkButton() {
-  static unsigned long lastButtonPress = 0;
-  static bool buttonPressed = false;
-  unsigned long currentTime = millis();
-  
-  if (digitalRead(buttonAPin) == LOW) {
-    if(!buttonPressed){
-      Serial.println("Button pressed");
-      lastButtonPress = currentTime;
-      buttonPressed = true;
-    }
-    if (currentTime - lastButtonPress >= debounceDelay || currentTime < lastButtonPress) {
-      if(buttonPressed){
-        Serial.println("Current time: " + String(currentTime) + ", Last button press: " + String(lastButtonPress));
-        changeMode();
-        buttonPressed = false;
+
+void checkButtonA() {
+  if (digitalRead(PIN_BUTTON_A) == LOW) {
+      if(currentMode != MANUAL){
+        changeMode('M');
+        Serial.println("Button A pressed and trying to swap mode!");
+      }
+      else{
+        Serial.println("Already in Manual mode -> Returning!");
       }
     }
-  }
-  else{
-    buttonPressed = false;
-  }
+}
+
+void checkButtonB() {
+  if (digitalRead(PIN_BUTTON_B) == LOW) {
+      if(currentMode != AUTO){
+        changeMode('A');
+        Serial.println("Button B pressed and trying to swap mode!");
+      }
+      else{
+        Serial.println("Already in Auto mode -> Returning!");
+      }
+    }
 }
 
 
@@ -192,17 +192,24 @@ void setup() {
   radio.setFrequencyBand(radioFrequency);
   radio.setGroup(dataGroup);
   display.begin();
-  pinMode(buttonAPin, INPUT_PULLUP);
+  pinMode(PIN_BUTTON_A, INPUT_PULLUP);
+  pinMode(PIN_BUTTON_B, INPUT_PULLUP);
 
-  // Initially sat to M, displaying 'M' in the matrix.
-  display.drawLine(0, 0, 0, 4, LED_ON);
-  display.drawLine(4, 0, 4, 4, LED_ON);
-  display.drawLine(1, 1, 2, 2, LED_ON);
-  display.drawLine(3,1, 3, 1, LED_ON);
+  // Initially set to S, displaying 'S' in the matrix.
+  display.drawLine(0, 0, 4, 0, LED_ON);
+  display.drawLine(0, 2, 4, 2, LED_ON);
+  display.drawLine(0, 4, 4, 4, LED_ON);
+  display.drawPixel(0, 1, LED_ON);
+  display.drawPixel(4, 3, LED_ON);
+
+    /* Initialise the sensor */
+  accel.begin();
+  accel.setMode(LSM303_MODE_NORMAL);
 }
 
 void loop() {
-  checkButton();
+  checkButtonA();
+  checkButtonB();
   if(sendAccelDataFlag == true && currentMode == MANUAL){
     sendAccelData();
   }

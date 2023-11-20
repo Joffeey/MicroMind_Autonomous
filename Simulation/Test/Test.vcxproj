@@ -104,7 +104,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,13 +129,10 @@
   <ItemGroup>
     <ClCompile Include="..\..\mms-cpp-master\API.cpp" />
     <ClCompile Include="..\..\mms-cpp-master\Main.cpp" />
+    <ClCompile Include="Test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\mms-cpp-master\API.h" />
-    <ClInclude Include="..\Cell.h" />
-    <ClInclude Include="..\Coordinates.h" />
-    <ClInclude Include="..\Maze.h" />
-    <ClInclude Include="..\MazeGraph.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

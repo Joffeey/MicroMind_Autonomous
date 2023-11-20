@@ -12,7 +12,13 @@ class IRSensor{
         }
 
         int read() const{
-            return analogRead(pin);
+            int res = 0;
+            int numOfRead = 20;
+            for(int i = 0; i < numOfRead; i++){
+                res += analogRead(pin);
+            }
+            res = res / numOfRead;
+            return res;
         } 
     
     
